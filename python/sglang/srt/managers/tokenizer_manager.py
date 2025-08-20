@@ -255,6 +255,7 @@ class TokenizerManager:
                 )
 
         # Init inter-process communication
+        # TODO 需要熟悉一下zmq的使用
         context = zmq.asyncio.Context(2)
         self.recv_from_detokenizer = get_zmq_socket(
             context, zmq.PULL, port_args.tokenizer_ipc_name, True
@@ -340,6 +341,7 @@ class TokenizerManager:
         self.current_load = 0
         self.current_load_lock = asyncio.Lock()
 
+        # TODO Metrics机制的实现
         # Metrics
         if self.enable_metrics:
             self.metrics_collector = TokenizerMetricsCollector(
@@ -353,6 +355,7 @@ class TokenizerManager:
                 collect_tokens_histogram=self.server_args.collect_tokens_histogram,
             )
 
+        # TODO 有必要控制方法调用的接受次数吗？必须上一次处理完才能处理下一次吗?
         # Communicators
         self.init_weights_update_group_communicator = _Communicator(
             self.send_to_scheduler, server_args.dp_size

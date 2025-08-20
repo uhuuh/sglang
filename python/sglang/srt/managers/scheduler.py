@@ -244,6 +244,7 @@ class Scheduler(
         )
 
         # Init inter-process communication
+        # TODO 为什么这里是2呢
         context = zmq.Context(2)
         self.idle_sleeper = None
 
@@ -251,6 +252,7 @@ class Scheduler(
             self.recv_from_tokenizer = get_zmq_socket(
                 context, zmq.PULL, port_args.scheduler_input_ipc_name, False
             )
+            # DEALER / ROUTER 是REQ / REP的异步增强版
             self.recv_from_rpc = get_zmq_socket(
                 context, zmq.DEALER, port_args.rpc_ipc_name, False
             )
@@ -2525,6 +2527,7 @@ def run_scheduler_process(
     configure_logger(server_args, prefix=prefix)
     suppress_other_loggers()
 
+    # TODO CPU亲和性
     # Set cpu affinity to this gpu process
     if get_bool_env_var("SGLANG_SET_CPU_AFFINITY"):
         set_gpu_proc_affinity(server_args.tp_size, server_args.nnodes, gpu_id)

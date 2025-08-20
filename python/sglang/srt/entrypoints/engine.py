@@ -714,7 +714,7 @@ def _launch_subprocesses(
 
         for pp_rank in pp_rank_range:
             for tp_rank in tp_rank_range:
-                reader, writer = mp.Pipe(duplex=False)
+                reader, writer = mp.Pipe(duplex=False) # 为False说明半双工
                 gpu_id = (
                     server_args.base_gpu_id
                     + ((pp_rank % pp_size_per_node) * tp_size_per_node)
@@ -736,6 +736,8 @@ def _launch_subprocesses(
                     ),
                 )
 
+                # 参考https://github.com/fzyzcjy/torch_memory_saver，memory saver似乎可以释放和重分配tensor的内存
+                # TODO 如何实现的呢，为什么子进程要这样做
                 with memory_saver_adapter.configure_subprocess():
                     proc.start()
                 scheduler_procs.append(proc)
@@ -763,6 +765,7 @@ def _launch_subprocesses(
             # When using `Engine` as a Python API, we don't want to block here.
             return None, None, None
 
+        # TODO 为什么非主节点的所有节点都需要lauunch，主节点不需要吗？
         launch_dummy_health_check_server(
             server_args.host, server_args.port, server_args.enable_metrics
         )
@@ -784,6 +787,7 @@ def _launch_subprocesses(
     )
     detoken_proc.start()
 
+    # TODO 只是初始化了一个对象，也没有看懂创建一个进程
     # Launch tokenizer process
     tokenizer_manager = TokenizerManager(server_args, port_args)
 

@@ -21,6 +21,7 @@ enable_language(CUDA)
 find_package(CUDAToolkit REQUIRED)
 set_property(GLOBAL PROPERTY CUDA_SEPARABLE_COMPILATION ON)
 
+set(ENV{CUDA_VERSION} "12.8")
 message(STATUS "Detected CUDA_VERSION=${CUDA_VERSION}")
 if ("${CUDA_VERSION}" VERSION_GREATER_EQUAL "13.0")
     message("CUDA_VERSION ${CUDA_VERSION} >= 13.0")
@@ -101,7 +102,7 @@ if(CCACHE_FOUND AND ENABLE_CCACHE AND DEFINED ENV{CCACHE_DIR})
 endif()
 
 # Enable gencode below SM90
-option(ENABLE_BELOW_SM90 "Enable below SM90" ON)
+option(ENABLE_BELOW_SM90 "Enable below SM90" OFF)
 
 if (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
     set(ENABLE_BELOW_SM90 OFF)
@@ -124,7 +125,6 @@ set(SGL_KERNEL_CUDA_FLAGS
     "-O3"
     "-Xcompiler"
     "-fPIC"
-    "-gencode=arch=compute_90,code=sm_90"
     "-std=c++17"
     "-DFLASHINFER_ENABLE_F16"
     "-DCUTE_USE_PACKED_TUPLE=1"
@@ -135,7 +135,7 @@ set(SGL_KERNEL_CUDA_FLAGS
     "-DCUTLASS_DEBUG_TRACE_LEVEL=0"
     "--expt-relaxed-constexpr"
     "--expt-extended-lambda"
-    "--threads=32"
+    "--threads=12"
 
     # Suppress warnings
     "-Xcompiler=-Wconversion"
@@ -163,12 +163,7 @@ endif()
 
 if ("${CUDA_VERSION}" VERSION_GREATER_EQUAL "12.8" OR SGL_KERNEL_ENABLE_SM100A)
     list(APPEND SGL_KERNEL_CUDA_FLAGS
-        "-gencode=arch=compute_100,code=sm_100"
-        "-gencode=arch=compute_100a,code=sm_100a"
-        "-gencode=arch=compute_101,code=sm_101"
-        "-gencode=arch=compute_101a,code=sm_101a"
         "-gencode=arch=compute_120,code=sm_120"
-        "-gencode=arch=compute_120a,code=sm_120a"
     )
 else()
     list(APPEND SGL_KERNEL_CUDA_FLAGS
@@ -178,9 +173,6 @@ endif()
 
 if ("${CUDA_VERSION}" VERSION_GREATER_EQUAL "12.4" OR SGL_KERNEL_ENABLE_SM90A)
     set(SGL_KERNEL_ENABLE_FA3 ON)
-    list(APPEND SGL_KERNEL_CUDA_FLAGS
-        "-gencode=arch=compute_90a,code=sm_90a"
-    )
 endif()
 
 if (SGL_KERNEL_ENABLE_BF16)
@@ -202,6 +194,8 @@ if ("${CUDA_VERSION}" VERSION_GREATER_EQUAL "12.8" OR SGL_KERNEL_ENABLE_FP4)
         "-DENABLE_NVFP4=1"
     )
 endif()
+
+message(">>>>>> SGL_KERNEL_CUDA_FLAGS: ${SGL_KERNEL_CUDA_FLAGS}")
 
 string(REPLACE "-D__CUDA_NO_HALF_OPERATORS__"       "" CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS}")
 string(REPLACE "-D__CUDA_NO_HALF_CONVERSIONS__"     "" CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS}")
@@ -323,7 +317,6 @@ if (SGL_KERNEL_ENABLE_FA3)
         "-O3"
         "-Xcompiler"
         "-fPIC"
-        "-gencode=arch=compute_90a,code=sm_90a"
         "-std=c++17"
         "-DCUTE_USE_PACKED_TUPLE=1"
         "-DCUTLASS_ENABLE_TENSOR_CORE_MMA=1"

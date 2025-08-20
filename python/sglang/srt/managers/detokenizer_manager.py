@@ -57,6 +57,7 @@ DETOKENIZER_MAX_STATES = int(os.environ.get("SGLANG_DETOKENIZER_MAX_STATES", 1 <
 class DecodeStatus:
     """Store the status of incremental decoding."""
 
+    # TODO 进一步理清楚，文件与token id的对应关系
     decoded_text: str
     decode_ids: List[int]
     surr_offset: int
@@ -75,6 +76,8 @@ class DetokenizerManager:
     ):
         # Init inter-process communication
         context = zmq.Context(2)
+        # PUB/SUB 是广播，一个PUB会把消息发送给所有的SUB
+        # PUSH/PULL 是负载均衡，一个PUSH会把消息发送给负载最轻的一个PULL
         self.recv_from_scheduler = get_zmq_socket(
             context, zmq.PULL, port_args.detokenizer_ipc_name, True
         )
@@ -108,6 +111,7 @@ class DetokenizerManager:
         while True:
             recv_obj = self.recv_from_scheduler.recv_pyobj()
             output = self._request_dispatcher(recv_obj)
+            # TODO 为什么这是是发送给tokenizer
             self.send_to_tokenizer.send_pyobj(output)
 
     def trim_matched_stop(
@@ -266,6 +270,7 @@ def run_detokenizer_process(
     port_args: PortArgs,
 ):
     kill_itself_when_parent_died()
+    # 设置进程名字
     setproctitle.setproctitle("sglang::detokenizer")
     configure_logger(server_args)
     parent_process = psutil.Process().parent()
@@ -276,4 +281,12 @@ def run_detokenizer_process(
     except Exception:
         traceback = get_exception_traceback()
         logger.error(f"DetokenizerManager hit an exception: {traceback}")
+        '''
+        SIGQUIT
+        程序员可以通过 signal(SIGQUIT, handler) 安装处理函数，来自定义退出逻辑，比如保存状态、清理资源、写日志。
+        可以忽略信号，不让进程退出。
+        SIGKILL
+        程序员完全无法干预。
+        发出后内核直接把进程清理掉，不会运行用户态代码，也不会生成 core dump。
+        '''
         parent_process.send_signal(signal.SIGQUIT)

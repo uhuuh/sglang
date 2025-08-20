@@ -162,6 +162,8 @@ async def lifespan(fast_api_app: FastAPI):
 
 
 # Fast API
+# lifespan=lifespan：设置应用的生命周期管理器，这是一个异步上下文管理器，
+# 用于在应用启动时执行初始化操作，在应用关闭时执行清理操作
 app = FastAPI(
     lifespan=lifespan,
     openapi_url=None if get_bool_env_var("DISABLE_OPENAPI_DOC") else "/openapi.json",
@@ -184,6 +186,7 @@ async def validation_exception_handler(request: Request, exc: HTTPException):
         type=str(exc.status_code),
         code=exc.status_code,
     )
+    # orjson是一个高性能的JSON库，序列化速度比标准库快3-5倍
     return ORJSONResponse(content=error.model_dump(), status_code=exc.status_code)
 
 
@@ -941,9 +944,11 @@ def launch_server(
 
     # Add prometheus middleware
     if server_args.enable_metrics:
+        # TODO metric
         add_prometheus_middleware(app)
         enable_func_timer()
 
+    # 默认场景下，没有pip writer，下面不会执行，各个worker会自动warm up
     # Send a warmup request - we will create the thread launch it
     # in the lifespan after all other warmups have fired.
     warmup_thread = threading.Thread(
@@ -970,7 +975,7 @@ def launch_server(
             loop="uvloop",
         )
     finally:
-        warmup_thread.join()
+        warmup_thread.join() # TODO
 
 
 def _execute_server_warmup(

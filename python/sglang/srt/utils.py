@@ -965,6 +965,7 @@ def set_ulimit(target_soft_limit=65535):
 
 
 def add_api_key_middleware(app, api_key: str):
+    # TODO 可能需要熟悉一下fast api这种中间件用法
     @app.middleware("http")
     async def authentication(request, call_next):
         if request.method == "OPTIONS":
@@ -1916,6 +1917,7 @@ def pyspy_dump_schedulers():
 def kill_itself_when_parent_died():
     if sys.platform == "linux":
         # sigkill this process when parent worker manager dies
+        # PR_SET_PDEATHSIG：这是Linux系统的一个prctl系统调用参数，用于设置当父进程死亡时发送给子进程的信号
         PR_SET_PDEATHSIG = 1
         libc = ctypes.CDLL("libc.so.6")
         libc.prctl(PR_SET_PDEATHSIG, signal.SIGKILL)
@@ -2072,6 +2074,7 @@ def launch_dummy_health_check_server(host, port, enable_metrics):
 
     # Add prometheus middleware
     if enable_metrics:
+        # TODO metrics是如何收集的
         add_prometheus_middleware(app)
         enable_func_timer()
 
@@ -2086,6 +2089,7 @@ def launch_dummy_health_check_server(host, port, enable_metrics):
     )
     server = uvicorn.Server(config=config)
 
+    # TODO 为什么这么多的loop
     try:
         loop = asyncio.get_running_loop()
         logger.info(
